@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Find the Names</title>
+<meta name="description" content="Find all seven hidden names in the letter grid.">
+<meta name="theme-color" content="#2430c8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+[hidden]{display:none!important}
+html{color-scheme:light;-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;overscroll-behavior-y:contain}
+/* Layout: one big letter sheet on a cobalt board, with the name list beside it on desktop and above it on phones. */
+:root{
+  --bg:#e8ebfb; --surface:#f7f8ff; --fg:#14173f; --muted:#555a86; --line:#c9cef0;
+  --board:#2430c8; --sheet:#ffffff; --sheet-ink:#14173f; --live:#ffbe1a; --accent:#2430c8; --on-accent:#ffffff;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",sans-serif;
+  --body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1030; --surface:#181b47; --fg:#eef0ff; --muted:#a6abd8; --line:#2f3370;
+  --board:#2f3be0; --sheet:#f5f6ff; --accent:#aab2ff; --on-accent:#0e1030; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1030; --surface:#181b47; --fg:#eef0ff; --muted:#a6abd8; --line:#2f3370;
+  --board:#2f3be0; --sheet:#f5f6ff; --accent:#aab2ff; --on-accent:#0e1030; color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--fg);font:400 15px/1.45 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 24px}
+button{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+h1{font:800 clamp(26px,4vw,36px)/1 var(--display);letter-spacing:-.03em;margin:0;flex:1 1 auto}
+.btn{min-height:40px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 11px;font-size:14px;color:var(--fg)}
+.btn{font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.game{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:24px;align-items:start}
+.play{display:flex;flex-direction:column;gap:10px;min-width:0}
+.shell{background:var(--board);border-radius:10px;padding:clamp(7px,1.5vw,14px)}
+#board{display:block;width:100%;max-width:min(100%,calc(100vh - 190px));min-width:0;margin:0 auto;aspect-ratio:1;background:var(--sheet);border-radius:5px;
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
+#board text{font:700 .56px var(--display);fill:#14173f;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.mark{fill:none;stroke-width:.76;stroke-linecap:round}
+.mark.new{stroke-dasharray:1;animation:draw .28s ease-out}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.score{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-variant-numeric:tabular-nums}
+.score b{font:700 22px/1 var(--display)}
+.score span{color:var(--muted);font-size:14px}
+.names{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.names li{display:flex;align-items:center;gap:9px;font:700 18px/1.2 var(--display);padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.names i{width:14px;height:14px;border-radius:50%;background:var(--c);flex:none}
+.status{margin:0;min-height:22px;font-size:14px;color:var(--muted)}
+.win{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--accent);color:var(--on-accent);border-radius:8px;padding:11px 14px}
+.win strong{font:700 19px/1.2 var(--display)}
+.win .btn{color:var(--fg)}
+@media (max-width:760px){
+  .game{grid-template-columns:minmax(0,1fr);gap:10px}
+  .side{gap:8px}
+  #board{max-width:100%}
+  .names{flex-direction:row;flex-wrap:wrap;gap:5px}
+  .names li{font-size:14px;padding:4px 8px;gap:5px}
+  .names i{width:10px;height:10px}
+}
+@media (prefers-reduced-motion:reduce){.mark.new{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Find the Names</h1>
+    <button class="btn" id="install" hidden>Install app</button>
+    <button class="btn primary" id="fresh">New grid</button>
+  </header>
+  <main class="game">
+    <section class="play">
+      <div class="shell"><svg id="board" tabindex="0" role="application" aria-label="Letter grid. Drag across a name, or use arrow keys and press Enter at its first and last letters."></svg></div>
+      <div class="win" id="win" hidden><strong id="winText"></strong><button class="btn" id="again">Play again</button></div>
+      <p class="status" id="status" role="status"></p>
+    </section>
+    <aside class="side">
+      <div class="score"><b id="count"></b><span id="timer">0:00</span></div>
+      <ul class="names" id="names"></ul>
+    </aside>
+  </main>
+</div>
+
+<script>
+/*ENGINE-START*/
+const NAMES=["RAJAN","VALSALA","NIMISHA","SINOSH","AISWARYA","ABHIJITH","RITHIK"];
+const ALL_DIRS=[[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]];
+const LEVELS={hard:{n:12,dirs:ALL_DIRS.slice(0,2),help:"Names run left to right or top to bottom."}};
+function rngFrom(s){return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(x){let h=2166136261;for(const c of x){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function shuffle(a,r){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function countName(g,name){const n=g.length;let hits=0;
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)for(const[dr,dc]of ALL_DIRS){let i=0;
+    for(;i<name.length;i++){const y=r+dr*i,x=c+dc*i;if(y<0||x<0||y>=n||x>=n||g[y][x]!==name[i])break}
+    if(i===name.length)hits++}
+  return hits}
+function layout(cfg,r){
+  const n=cfg.n,g=Array.from({length:n},()=>Array(n).fill("")),placed=[];
+  const order=shuffle(NAMES,r).sort((a,b)=>b.length-a.length);
+  for(const name of order){let done=false;
+    for(const[dr,dc]of shuffle(cfg.dirs,r)){const opts=[];
+      for(let y=0;y<n;y++)for(let x=0;x<n;x++){const ey=y+dr*(name.length-1),ex=x+dc*(name.length-1);if(ey<0||ex<0||ey>=n||ex>=n)continue;
+        let ok=true,over=0;for(let i=0;i<name.length&&ok;i++){const v=g[y+dr*i][x+dc*i];if(v===name[i])over++;else if(v)ok=false}
+        if(ok&&over<3)opts.push({y,x,over})}
+      if(!opts.length)continue;
+      const crossing=opts.filter(o=>o.over);
+      const pool=crossing.length&&r()<.35?crossing:opts,p=pool[Math.floor(r()*pool.length)];
+      for(let i=0;i<name.length;i++)g[p.y+dr*i][p.x+dc*i]=name[i];
+      placed.push({name,r:p.y,c:p.x,dr,dc});done=true;break}
+    if(!done)return null}
+  return{g,placed}}
+function makePuzzle(level,seed){
+  const cfg=LEVELS[level],r=rngFrom(hashStr(level+"/"+seed)),pool=NAMES.join("");
+  for(;;){const l=layout(cfg,r);if(!l)continue;
+    for(let t=0;t<60;t++){const g=l.g.map(row=>row.map(v=>v||pool[Math.floor(r()*pool.length)]));
+      if(NAMES.every(x=>countName(g,x)===1))return{level,seed,n:cfg.n,grid:g,placed:l.placed}}}
+}
+/*ENGINE-END*/
+
+const $=id=>document.getElementById(id),NS="http://www.w3.org/2000/svg";
+const COLORS=["#ffd84d","#8fe3b4","#ffb3c7","#9fd4ff","#d3b8ff","#ffc48a","#b9ec6a"];
+const KEY="findnames:v2";
+const store={get(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}};
+const nice=n=>n[0]+n.slice(1).toLowerCase();
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+let P,S,marks,overlay,drag=null,anchor=null,kb=null;
+const svg=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.append(e);return e};
+const say=t=>{$("status").textContent=t};
+const save=()=>store.set({level:P.level,seed:P.seed,found:S.found,time:S.time});
+const done=()=>S.found.length===NAMES.length;
+
+function load(level,seed,saved){
+  P=makePuzzle(level,seed);S={found:saved?saved.found.filter(n=>NAMES.includes(n)):[],time:saved?saved.time:0};
+  drag=anchor=kb=null;
+  const b=$("board");b.innerHTML="";b.setAttribute("viewBox","0 0 "+P.n+" "+P.n);
+  marks=svg("g",{},b);overlay=svg("g",{},b);
+  P.grid.forEach((row,r)=>row.forEach((ch,c)=>{svg("text",{x:c+.5,y:r+.53},b).textContent=ch}));
+  S.found.forEach(n=>addMark(n,false));
+  say(done()?"":"Drag across a name. "+LEVELS[level].help);refresh();save()}
+function addMark(name,fresh){
+  const p=P.placed.find(x=>x.name===name),L=name.length-1;
+  const m=svg("line",{class:"mark"+(fresh?" new":""),x1:p.c+.5,y1:p.r+.5,x2:p.c+p.dc*L+.5,y2:p.r+p.dr*L+.5,stroke:COLORS[NAMES.indexOf(name)],pathLength:1},marks);
+  if(fresh)m.addEventListener("animationend",()=>m.classList.remove("new"))}
+function refresh(){
+  $("names").innerHTML="";
+  for(const n of S.found){const li=document.createElement("li");li.style.setProperty("--c",COLORS[NAMES.indexOf(n)]);li.innerHTML="<i></i><span></span>";li.lastChild.textContent=nice(n);$("names").append(li)}
+  $("count").textContent=S.found.length+" of "+NAMES.length+" found";$("timer").textContent=fmt(S.time);
+  $("win").hidden=!done();
+  if(done())$("winText").textContent="All "+NAMES.length+" found in "+fmt(S.time);
+  paint()}
+function paint(cells){
+  overlay.innerHTML="";
+  if(cells&&cells.length){const a=cells[0],z=cells[cells.length-1];svg("line",{x1:a.c+.5,y1:a.r+.5,x2:z.c+.5,y2:z.r+.5,stroke:"#ffbe1a","stroke-opacity":.75,"stroke-width":.76,"stroke-linecap":"round"},overlay)}
+  if(kb)svg("rect",{x:kb.c+.06,y:kb.r+.06,width:.88,height:.88,rx:.14,fill:"none",stroke:"#2430c8","stroke-width":.07},overlay)}
+function cellAt(e){const b=$("board").getBoundingClientRect(),clamp=v=>Math.max(0,Math.min(P.n-1,v));
+  return{r:clamp(Math.floor((e.clientY-b.top)/b.height*P.n)),c:clamp(Math.floor((e.clientX-b.left)/b.width*P.n))}}
+function lineCells(a,z){
+  const dy=z.r-a.r,dx=z.c-a.c;if(!dy&&!dx)return[a];
+  const o=Math.round(Math.atan2(dy,dx)/(Math.PI/4)),t=o*Math.PI/4,sy=Math.round(Math.sin(t)),sx=Math.round(Math.cos(t));
+  let len=sy&&sx?Math.round((Math.abs(dx)+Math.abs(dy))/2):Math.max(Math.abs(dx),Math.abs(dy));
+  const out=[a];for(let i=1;i<=len;i++){const r=a.r+sy*i,c=a.c+sx*i;if(r<0||c<0||r>=P.n||c>=P.n)break;out.push({r,c})}
+  return out}
+function submit(cells){
+  const w=cells.map(x=>P.grid[x.r][x.c]).join(""),back=[...w].reverse().join("");
+  const hit=NAMES.find(n=>(n===w||n===back)&&!S.found.includes(n));
+  if(hit){S.found.push(hit);addMark(hit,true);say(done()?"":nice(hit)+" found.");save()}
+  else if(NAMES.includes(w)||NAMES.includes(back))say("You already found that name.");
+  else if(cells.length>2)say(w+" is not on the list.");
+  refresh()}
+const same=(a,b)=>a&&b&&a.r===b.r&&a.c===b.c;
+const B=$("board");
+B.addEventListener("pointerdown",e=>{if(done())return;e.preventDefault();B.focus({preventScroll:true});kb=null;const c=cellAt(e);drag={start:c,cur:c,moved:false,id:e.pointerId};try{B.setPointerCapture(e.pointerId)}catch(x){}paint(anchor?[anchor,c].slice(0,same(anchor,c)?1:2):[c])});
+B.addEventListener("pointermove",e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();const c=cellAt(e);if(same(c,drag.cur))return;drag.cur=c;drag.moved=true;anchor=null;paint(lineCells(drag.start,c))});
+B.addEventListener("pointerup",e=>{if(!drag||e.pointerId!==drag.id)return;const d=drag;drag=null;
+  if(d.moved){submit(lineCells(d.start,d.cur));return}
+  if(anchor&&!same(anchor,d.start)){const a=anchor;anchor=null;submit(lineCells(a,d.start));return}
+  anchor=same(anchor,d.start)?null:d.start;paint(anchor?[anchor]:null)});
+B.addEventListener("pointercancel",()=>{drag=null;paint(anchor?[anchor]:null)});
+B.addEventListener("contextmenu",e=>e.preventDefault());
+B.addEventListener("keydown",e=>{
+  if(done())return;const mv={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];
+  if(mv){e.preventDefault();kb=kb||{r:0,c:0};kb={r:Math.max(0,Math.min(P.n-1,kb.r+mv[0])),c:Math.max(0,Math.min(P.n-1,kb.c+mv[1]))};paint(anchor?lineCells(anchor,kb):null)}
+  else if((e.key==="Enter"||e.key===" ")){e.preventDefault();kb=kb||{r:0,c:0};
+    if(anchor){const a=anchor;anchor=null;submit(lineCells(a,kb))}else{anchor=kb;paint([anchor])}}});
+function fresh(){load("hard",1+Math.floor(Math.random()*99999))}
+$("fresh").onclick=fresh;$("again").onclick=fresh;
+setInterval(()=>{if(P&&!done()&&!document.hidden){S.time++;$("timer").textContent=fmt(S.time);if(S.time%5===0)save()}},1000);
+const last=store.get();
+if(last&&last.level==="hard"&&last.seed)load("hard",last.seed,last);else load("hard",1);
+
+let installEvent=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvent=e;$("install").hidden=false});
+$("install").onclick=async()=>{if(!installEvent)return;installEvent.prompt();await installEvent.userChoice;installEvent=null;$("install").hidden=true};
+window.addEventListener("appinstalled",()=>{$("install").hidden=true});
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
